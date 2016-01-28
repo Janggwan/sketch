@@ -60,7 +60,7 @@ from blocks.initialization import Uniform
 floatX = theano.config.floatX
 fuel.config.floatX = floatX
 from fuel.transformers import Mapping
-from blocks.utils import named_copy
+
 logger = logging.getLogger(__name__)
 import pprint
 
@@ -188,7 +188,8 @@ class Sample(SimpleExtension):
         for i in range(batch_size):
             pl.subplot(h,w,i+1)
             drawpoints(outputs[:,i,:], xmin, ymin, xmax, ymax)
-        fname = os.path.join(self.path,'sketch{}.png'.format(epochstr))
+        #fname = os.path.join(self.path,'sketch{}.png'.format(epochstr))
+        fname = self.path+'sketch{}.png'.format(epochstr)
         print('Writting to %s'%fname)
         pl.subplots_adjust(left=0.005,right=0.995,bottom=0.005,top=0.995,
                            wspace=0.01,hspace=0.01)
@@ -205,7 +206,7 @@ class Sample(SimpleExtension):
         pl.title('Pen down for different samples vs. iteration step')
         if not os.path.exists(self.path):
             os.mkdir(self.path)
-        fname = os.path.join(self.path,'pen{}.png'.format(epochstr))
+        fname = self.path+'pen{}.png'.format(epochstr)
         print('Writting to %s'%fname)
         pl.savefig(fname)
 
@@ -504,8 +505,8 @@ def main(name, epochs, batch_size, learning_rate,
     (energies,) = VariableFilter(
         applications=[generator.readout.readout],
         name_regex="output")(cg.variables)
-    min_energy = named_copy(energies.min(), "min_energy")
-    max_energy = named_copy(energies.max(), "max_energy")
+    min_energy = energies.min().copy(name="min_energy")
+    max_energy = energies.max().copy(name="max_energy")
     observables += [min_energy, max_energy]
 
     # (activations,) = VariableFilter(
@@ -517,13 +518,13 @@ def main(name, epochs, batch_size, learning_rate,
 
     observables += [algorithm.total_step_norm, algorithm.total_gradient_norm]
     for name, param in params.items():
-        observables.append(named_copy(
-            param.norm(2), name + "_norm"))
-        observables.append(named_copy(
-            algorithm.gradients[param].norm(2), name + "_grad_norm"))
+        observables.append(param.norm(2).copy(
+            name=name + "_norm"))
+        observables.append(algorithm.gradients[param].norm(2).copy(
+            name=name + "_grad_norm"))
 
     #------------------------------------------------------------
-    datasource_fname = os.path.join(fuel.config.data_path, datasource,
+    datasource_fname = os.path.join(fuel.config.data_path[0], datasource,
                                     datasource+'.hdf5')
 
     train_ds = H5PYDataset(datasource_fname, #max_length=max_length,
